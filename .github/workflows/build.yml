@@ -1,0 +1,49 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build with ndk-build
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Get Module Name
+        id: get_name
+        run: echo "module_name=$(grep 'LOCAL_MODULE' Android.mk | sed 's/LOCAL_MODULE *:= *//' | xargs)" >> $GITHUB_OUTPUT
+
+      - name: Delete Old Release and Tag
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: latest
+          delete_release: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Create New Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          name: "Latest Build"
+          body: |
+            Build otomatis terbaru.
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+          files: libs/armeabi-v7a/lib${{ steps.get_name.outputs.module_name }}.so
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
