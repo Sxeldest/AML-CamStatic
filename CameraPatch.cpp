@@ -126,7 +126,7 @@ void CameraPatchOnInitRenderware()
 
 void CameraPatchOnRender2D()
 {
-    if (!g_camSettings.enableCameraPatch || !s_theCamera || !s_timeStep || !s_widgets || !s_menuOpened || !s_userPause)
+    if (!s_theCamera || !s_timeStep || !s_widgets || !s_menuOpened || !s_userPause)
     {
         ResetTouchDeltas();
         return;
