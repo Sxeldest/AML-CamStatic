@@ -3,12 +3,12 @@
 struct CamSettings
 {
     bool enableCameraPatch;
-    float camSensX;
-    float camSensY;
-    float aimSensX;
-    float aimSensY;
-    float smoothness;
-    float camAccel;
+    float CameraSensX;
+    float CameraSensY;
+    float AimingSensX;
+    float AimingSensY;
+    float CamSmoothnes;
+    float CamAcceleration;
 };
 
 extern CamSettings g_camSettings;

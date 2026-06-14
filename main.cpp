@@ -9,17 +9,13 @@ MYMODCFG(net.dexsocy.camstatic, CamStatic, 1.0, Dexsociety)
 
 uintptr_t g_gtasa = 0;
 void* pGameHandle = nullptr;
-
-// Addresses
 uintptr_t addrIsTouched = 0x2B0CBC;
 
-// Hook declarations
 DECL_HOOK(bool, InitRenderware);
 DECL_HOOKv(Render2DStuff);
 DECL_HOOKv(OnTouchEvent, int type, int fingerId, int x, int y);
 DECL_HOOKi(IsTouched, int widgetId, void* a2, int a3);
 
-// Hook implementations
 bool HookOf_InitRenderware()
 {
     if (!InitRenderware()) return false;
@@ -38,8 +34,6 @@ void HookOf_OnTouchEvent(int type, int fingerId, int x, int y)
 {
     if (fingerId < 0 || fingerId >= 15) return;
     CameraPatchOnTouchEvent(type, fingerId, x, y);
-
-    // Call original for first few fingers to not break game
     if (fingerId < 4)
     {
         OnTouchEvent(type, fingerId, x, y);
