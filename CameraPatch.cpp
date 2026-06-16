@@ -260,7 +260,6 @@ void CameraPatchOnRender2D()
                 }
             }
         }
-    }
 
     if (isMoving && isCurrentlyTouched)
     {
@@ -280,6 +279,7 @@ void CameraPatchOnRender2D()
         }
         s_velH = 0.0f;
         s_velV = 0.0f;
+        s_activeCameraFinger = -1;
     }
     else
     {
