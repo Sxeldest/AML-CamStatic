@@ -26,6 +26,8 @@ static float s_fingerDeltaX[15] = {0};
 static float s_fingerDeltaY[15] = {0};
 static float s_lastTouchX[15] = {0};
 static float s_lastTouchY[15] = {0};
+static bool s_fingerDown[15] = {false};
+static int s_activeCameraFinger = -1;
 static eCamMode s_prevMode = MODE_NONE;
 static int s_transitionFrames = 0;
 
@@ -176,38 +178,58 @@ void CameraPatchOnRender2D()
     if (dt <= 0.0f) return;
 
     bool isMoving = false;
+    if (s_displayX <= 0 && RsGlobal)
+    {
+        s_displayX = RsGlobal->maximumWidth;
+        s_displayY = RsGlobal->maximumHeight;
+    }
+
     if (isCurrentlyTouched)
     {
-        int fingerId = lookWidget ? lookWidget->nTouchID : -1;
-
-        if (s_customLookActive && s_customLookFinger != -1)
+        // Reset active finger if it's no longer down
+        if (s_activeCameraFinger != -1 && !s_fingerDown[s_activeCameraFinger])
         {
-            fingerId = s_customLookFinger;
-        }
-        else if (fingerId >= 0 && fingerId < 15 && s_lastTouchX[fingerId] < (float)s_displayX * 0.45f)
-        {
-            fingerId = -1;
+            s_activeCameraFinger = -1;
         }
 
-        if (fingerId < 0 || fingerId >= 15)
+        if (s_activeCameraFinger == -1)
         {
-            for (int i = 0; i < 15; ++i)
+            int candidateId = -1;
+            if (s_customLookActive && s_customLookFinger != -1 && s_fingerDown[s_customLookFinger])
             {
-                if ((fabsf(s_fingerDeltaX[i]) > 0.01f || fabsf(s_fingerDeltaY[i]) > 0.01f))
+                candidateId = s_customLookFinger;
+            }
+            else if (lookWidget && lookWidget->bIsTouched && lookWidget->nTouchID >= 0 && lookWidget->nTouchID < 15 && s_fingerDown[lookWidget->nTouchID])
+            {
+                candidateId = lookWidget->nTouchID;
+            }
+
+            float rightSideThreshold = (s_displayX > 0) ? (float)s_displayX * 0.45f : 500.0f;
+
+            // If we have a candidate from widget/custom, verify it's on the right side (unless custom)
+            if (candidateId != -1)
+            {
+                if (s_customLookActive || s_lastTouchX[candidateId] > rightSideThreshold)
                 {
-                    if (s_customLookActive)
+                    s_activeCameraFinger = candidateId;
+                }
+            }
+
+            // If still no active finger, look for any moving finger on the right
+            if (s_activeCameraFinger == -1)
+            {
+                for (int i = 0; i < 15; ++i)
+                {
+                    if (s_fingerDown[i] && s_lastTouchX[i] > rightSideThreshold && (fabsf(s_fingerDeltaX[i]) > 0.01f || fabsf(s_fingerDeltaY[i]) > 0.01f))
                     {
-                         if (i == s_customLookFinger) { fingerId = i; break; }
-                    }
-                    else if (s_lastTouchX[i] > (float)s_displayX * 0.45f)
-                    {
-                        fingerId = i;
+                        s_activeCameraFinger = i;
                         break;
                     }
                 }
             }
         }
 
+        int fingerId = s_activeCameraFinger;
         if (fingerId >= 0 && fingerId < 15)
         {
             float dx = s_fingerDeltaX[fingerId];
@@ -217,24 +239,25 @@ void CameraPatchOnRender2D()
             {
                 isMoving = true;
 
-                float sensMultiplier = 0.00025f;
-                float sensX = (IsAimMode(cam.m_nMode) ? g_camSettings.aimSensX : g_camSettings.camSensX) * sensMultiplier;
-                float sensY = (IsAimMode(cam.m_nMode) ? g_camSettings.aimSensY : g_camSettings.camSensY) * sensMultiplier;
+                    float sensMultiplier = 0.00025f;
+                    float sensX = (IsAimMode(cam.m_nMode) ? g_camSettings.aimSensX : g_camSettings.camSensX) * sensMultiplier;
+                    float sensY = (IsAimMode(cam.m_nMode) ? g_camSettings.aimSensY : g_camSettings.camSensY) * sensMultiplier;
 
-                if (g_camSettings.camAccel > 1.0f)
-                {
-                    float velocity = sqrtf(dx * dx + dy * dy) / dt;
-                    float accelFactor = 1.0f + (velocity * 0.00002f * (g_camSettings.camAccel - 1.0f));
-                    if (accelFactor > 5.0f) accelFactor = 5.0f;
-                    sensX *= accelFactor;
-                    sensY *= accelFactor;
+                    if (g_camSettings.camAccel > 1.0f)
+                    {
+                        float velocity = sqrtf(dx * dx + dy * dy) / dt;
+                        float accelFactor = 1.0f + (velocity * 0.00002f * (g_camSettings.camAccel - 1.0f));
+                        if (accelFactor > 5.0f) accelFactor = 5.0f;
+                        sensX *= accelFactor;
+                        sensY *= accelFactor;
+                    }
+
+                    s_smoothH = NormalizeAngle(s_smoothH - (dx * sensX));
+                    s_smoothV = s_smoothV - (dy * sensY);
+
+                    if (s_smoothV > 1.5f) s_smoothV = 1.5f;
+                    if (s_smoothV < -1.1f) s_smoothV = -1.1f;
                 }
-
-                s_smoothH = NormalizeAngle(s_smoothH - (dx * sensX));
-                s_smoothV = s_smoothV - (dy * sensY);
-
-                if (s_smoothV > 1.5f) s_smoothV = 1.5f;
-                if (s_smoothV < -1.1f) s_smoothV = -1.1f;
             }
         }
     }
@@ -275,22 +298,24 @@ void CameraPatchOnTouchEvent(int type, int fingerId, int x, int y)
 {
     if (fingerId < 0 || fingerId >= 15) return;
 
-    if (type == 2)
+    if (type == 2) // DOWN
     {
+        s_fingerDown[fingerId] = true;
         s_lastTouchX[fingerId] = (float)x;
         s_lastTouchY[fingerId] = (float)y;
         s_fingerDeltaX[fingerId] = 0.0f;
         s_fingerDeltaY[fingerId] = 0.0f;
     }
-    else if (type == 3)
+    else if (type == 3) // MOVE
     {
         s_fingerDeltaX[fingerId] += (float)(x - s_lastTouchX[fingerId]);
         s_fingerDeltaY[fingerId] += (float)(y - s_lastTouchY[fingerId]);
         s_lastTouchX[fingerId] = (float)x;
         s_lastTouchY[fingerId] = (float)y;
     }
-    else if (type == 1)
+    else if (type == 1) // UP
     {
+        s_fingerDown[fingerId] = false;
         s_fingerDeltaX[fingerId] = 0.0f;
         s_fingerDeltaY[fingerId] = 0.0f;
     }
