@@ -205,6 +205,126 @@ ConfigEntry* Config::Bind(const char* szKey, bool bDefaultValue, const char* szS
     return pRet;
 }
 
+ConfigEntry* Config::BindOnce(const char* szKey, const char* szDefaultValue, const char* szSection)
+{
+    if(!m_bInitialized) return NULL;
+    ConfigEntry* pRet = new ConfigEntry;
+    pRet->m_pBoundCfg = this;
+    strxcpy(pRet->m_szMySection, szSection, sizeof(pRet->m_szMySection));
+    strxcpy(pRet->m_szMyKey, szKey, sizeof(pRet->m_szMyKey));
+    strxcpy(pRet->m_szDefaultValue, szDefaultValue, sizeof(pRet->m_szDefaultValue));
+    const char* tryToGetValue;
+    #if !defined(__AML) && defined(_ICFG)
+        tryToGetValue = m_pICFG->GetValueFrom(m_iniMyConfig, szSection, szKey);
+    #else
+        tryToGetValue = hINI[szSection][szKey].as<const char*>();
+    #endif
+    if(tryToGetValue[0] == '\0')
+    {
+        pRet->m_bNotDefaultValue = false;
+        pRet->SetString(szDefaultValue);
+    }
+    else
+    {
+        bool bShouldChange = !pRet->m_pBoundCfg->m_bValueChanged;
+        pRet->SetString(tryToGetValue);
+        pRet->m_bNotDefaultValue = strcmp(tryToGetValue, szDefaultValue) != 0;
+        if(bShouldChange) pRet->m_pBoundCfg->m_bValueChanged = false;
+    }
+    pLastEntry = pRet;
+    return pRet;
+}
+
+ConfigEntry* Config::BindOnce(const char* szKey, int nDefaultValue, const char* szSection)
+{
+    if(!m_bInitialized) return NULL;
+    ConfigEntry* pRet = new ConfigEntry;
+    pRet->m_pBoundCfg = this;
+    strxcpy(pRet->m_szMySection, szSection, sizeof(pRet->m_szMySection));
+    strxcpy(pRet->m_szMyKey, szKey, sizeof(pRet->m_szMyKey));
+    snprintf(pRet->m_szDefaultValue, sizeof(pRet->m_szDefaultValue), "%d", nDefaultValue);
+    const char* tryToGetValue;
+    #if !defined(__AML) && defined(_ICFG)
+        tryToGetValue = m_pICFG->GetValueFrom(m_iniMyConfig, szSection, szKey);
+    #else
+        tryToGetValue = hINI[szSection][szKey].as<const char*>();
+    #endif
+    if(tryToGetValue[0] == '\0')
+    {
+        pRet->m_bNotDefaultValue = false;
+        pRet->SetInt(nDefaultValue);
+    }
+    else
+    {
+        bool bShouldChange = !pRet->m_pBoundCfg->m_bValueChanged;
+        pRet->SetString(tryToGetValue);
+        pRet->m_bNotDefaultValue = (nDefaultValue != pRet->m_nIntegerValue);
+        if(bShouldChange) pRet->m_pBoundCfg->m_bValueChanged = false;
+    }
+    pLastEntry = pRet;
+    return pRet;
+}
+
+ConfigEntry* Config::BindOnce(const char* szKey, float flDefaultValue, const char* szSection)
+{
+    if(!m_bInitialized) return NULL;
+    ConfigEntry* pRet = new ConfigEntry;
+    pRet->m_pBoundCfg = this;
+    strxcpy(pRet->m_szMySection, szSection, sizeof(pRet->m_szMySection));
+    strxcpy(pRet->m_szMyKey, szKey, sizeof(pRet->m_szMyKey));
+    snprintf(pRet->m_szDefaultValue, sizeof(pRet->m_szDefaultValue), "%f", flDefaultValue);
+    const char* tryToGetValue;
+    #if !defined(__AML) && defined(_ICFG)
+        tryToGetValue = m_pICFG->GetValueFrom(m_iniMyConfig, szSection, szKey);
+    #else
+        tryToGetValue = hINI[szSection][szKey].as<const char*>();
+    #endif
+    if(tryToGetValue[0] == '\0')
+    {
+        pRet->m_bNotDefaultValue = false;
+        pRet->SetFloat(flDefaultValue);
+    }
+    else
+    {
+        bool bShouldChange = !pRet->m_pBoundCfg->m_bValueChanged;
+        pRet->SetString(tryToGetValue);
+        pRet->m_bNotDefaultValue = (flDefaultValue != pRet->m_fFloatValue);
+        if(bShouldChange) pRet->m_pBoundCfg->m_bValueChanged = false;
+    }
+    pLastEntry = pRet;
+    return pRet;
+}
+
+ConfigEntry* Config::BindOnce(const char* szKey, bool bDefaultValue, const char* szSection)
+{
+    if(!m_bInitialized) return NULL;
+    ConfigEntry* pRet = new ConfigEntry;
+    pRet->m_pBoundCfg = this;
+    strxcpy(pRet->m_szMySection, szSection, sizeof(pRet->m_szMySection));
+    strxcpy(pRet->m_szMyKey, szKey, sizeof(pRet->m_szMyKey));
+    pRet->m_szDefaultValue[0] = bDefaultValue ? '1' : '0'; pRet->m_szDefaultValue[1] = 0;
+    const char* tryToGetValue;
+    #if !defined(__AML) && defined(_ICFG)
+        tryToGetValue = m_pICFG->GetValueFrom(m_iniMyConfig, szSection, szKey);
+    #else
+        tryToGetValue = hINI[szSection][szKey].as<const char*>();
+    #endif
+    if(tryToGetValue[0] == '\0')
+    {
+        pRet->m_bNotDefaultValue = false;
+        pRet->SetBool(bDefaultValue);
+    }
+    else
+    {
+        bool bShouldChange = !pRet->m_pBoundCfg->m_bValueChanged;
+        pRet->SetString(tryToGetValue);
+        pRet->m_bNotDefaultValue = (bDefaultValue != (!!pRet->m_nIntegerValue));
+        if(bShouldChange) pRet->m_pBoundCfg->m_bValueChanged = false;
+    }
+    pLastEntry = pRet;
+    return pRet;
+}
+
 ConfigEntry* Config::Bind(const char* szKey, rgba_t clr, const char* szSection)
 {
     if(!m_bInitialized) return NULL;

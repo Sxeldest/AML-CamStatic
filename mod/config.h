@@ -37,7 +37,12 @@ public:
     ConfigEntry* Bind(const char* szKey, float flDefaultValue, const char* szSection = "Preferences");
     ConfigEntry* Bind(const char* szKey, bool bDefaultValue, const char* szSection = "Preferences");
     ConfigEntry* Bind(const char* szKey, rgba_t clrDefaultValue, const char* szSection = "Preferences");
-    
+
+    ConfigEntry* BindOnce(const char* szKey, const char* szDefaultValue, const char* szSection = "Preferences");
+    ConfigEntry* BindOnce(const char* szKey, int nDefaultValue, const char* szSection = "Preferences");
+    ConfigEntry* BindOnce(const char* szKey, float flDefaultValue, const char* szSection = "Preferences");
+    ConfigEntry* BindOnce(const char* szKey, bool bDefaultValue, const char* szSection = "Preferences");
+
     // FAST GET. NO NEED TO CLEAN THE MEMORY.
     const char*  GetString(const char* szKey, const char* szDefaultValue, const char* szSection = "Preferences");
     int          GetInt(const char* szKey, int nDefaultValue, const char* szSection = "Preferences");
